@@ -21,3 +21,5 @@ noms <- c("jours", "horaires", "types", "fréquence", "acessibilité", "diversit
 tt <- tibble(zz1,zz2,zz3,zz4,zz5,zz6)
 names(tt) <- noms
 write.csv(tt, "test.csv")
+
+devtool
