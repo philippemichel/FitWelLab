@@ -1,0 +1,62 @@
+---
+subtitle: "Rapport d'analyse"
+---
+
+# Introduction
+
+```{r}
+#| label: setup
+
+rm(list = ls())
+#
+library(baseph)
+library(tidyverse)
+library(gtsummary)
+library(kableExtra)
+library(forestmodel)
+library(labelled)
+library(epiDisplay)
+library(visdat)
+library(GGally)
+library(ggridges)
+library(ggsci)
+library(tidytext)
+library(purrr)
+#
+theme_gtsummary_language(language = "fr", decimal.mark = ",")
+options(OutDec = ",")
+#
+load("datas/fitw.RData")
+expx <- FALSE
+classeur <- "fitw"
+if (expx){system(paste0("rm -f ",classeur))}
+#
+cat <- list(all_continuous() ~ "wilcox.test", all_categorical() ~ "chisq.test")
+affl <- list(all_categorical()~"{n}/{N} ({p})")
+```
+
+# Description des données
+
+## Données démographiques
+
+```{r}
+#| label: tbl-demo
+#| tbl-cap: Données démographiques
+
+tt |> 
+  dplyr::select(age,sexe,trajet) |> 
+  tbl_summary(type = list(age~"continuous")) |> 
+   modify_header(label ~ " ") |>
+    bold_labels() |> 
+  gexptabph(exp = expx, nomfich = classeur, nomsheet= "demo",lg = TRUE)
+```
+
+```{r}
+#| label: fig-pyr
+#| fig-cap: Pyramide des âges
+
+pyramid(tt$age,tt$sexe, binwidth = 10, col.gender = c("pink","lightblue"), main = "Pyramide de âges")
+```
+
+
+
