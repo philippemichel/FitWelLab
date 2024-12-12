@@ -130,6 +130,7 @@ zz |>
 
 satin |> 
   dplyr::select(13:16, temps) |> 
+  
   tbl_summary(by = temps) |> 
       modify_header(label ~ "") |>
     bold_labels() |> 

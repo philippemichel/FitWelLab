@@ -1,0 +1,485 @@
+---
+title: "FitWelLAB"
+lang: fr
+language:
+  title-block-author-single: "Auteur"
+author:
+  - name: "D<up>r</up> Philippe MICHEL"
+    affiliation:
+      name: "USRC - Hôpital NOVO"
+      orcid: 0000-0003-2392-7186
+      department: "Unité de Soutien à la Recherche Clinique"
+      city: "Pontoise"
+format:
+  html:
+    page-layout: full
+    toc: true
+    theme:
+      light: cerulean
+      dark: cyborg
+    code-fold: true
+embed-resources: true
+highlight-style: ayu
+cache: false
+warning: false
+message: false
+bibliography: stat.bib
+license: "MIT"
+---
+
+::: {.panel-tabset}
+
+# Introduction
+
+**Impact de la section associative et sportive Section Athlé-NOVO sur le bien-être au travail des agents de l’hôpital NOVO**
+
+```{r}
+#| label: import
+
+library(tidyverse)
+library(readODS)
+library(labelled)
+
+# Import data
+tt <- read_ods("datas/fitweb.ods", sheet = 1) |>
+  janitor::clean_names() |>
+  mutate(across(where(is.character), as.factor)) |>
+  mutate(age = 2024 - anne_naissance) |>
+  mutate(
+    trajet = fct_relevel(
+      trajet,
+      "Moins de 10 min",
+      "Entre 11 et 20 min",
+      "Entre 21 et 30 min",
+      "Entre 31 et 45 min",
+      "Plus de 45 min"
+    )
+  ) |>
+  mutate(across(ends_with("h_j"), ~ as.numeric(hms(.x)) / 60)) |>
+  mutate(temps_assis =  as.numeric(hms(temps_assis)) / 60)
+
+bnom <- c(
+  "ID",
+  "Année de naissance",
+  "Sexe",
+  "Temps de trajet",
+  "Raison de l'adhésion",
+  "Activités intenses",
+  "Activités intenses",
+  "Activités modérées",
+  "Activités modérées",
+  "Marche",
+  "Marche",
+  "Temps assis",
+  "Âge"
+)
+
+var_label(tt) <- bnom
+#
+save(tt, file = "datas/fitw.RData")
+load("datas/fitw.RData")
+
+
+tt0 <- read_ods("datas/M0.ods", sheet = 1) |>
+  janitor::clean_names() |>
+  mutate(across(where(is.character), as.factor)) |>
+  mutate(temps = "M0")
+
+tt3 <- read_ods("datas/M3.ods", sheet = 1) |>
+  janitor::clean_names() |>
+  mutate(across(where(is.character), as.factor)) |>
+  mutate(temps = "M3")
+
+tt7 <- read_ods("datas/M7.ods", sheet = 1) |>
+  janitor::clean_names() |>
+  mutate(across(where(is.character), as.factor)) |>
+  mutate(temps = "M7")
+#
+#---------------------------------
+#
+
+lyk <- function(df, n1, n2, lv) {
+  df <- df |>
+    mutate(across(n1:n2, ~ factor(.x, levels = lv))) |>
+    mutate(across(n1:n2, ~ fct_relevel(.x, lv)))
+  return(df)
+}
+#
+#---------------------------------
+#
+lv1 <- c("très bon(ne)",
+         "bon(ne)",
+         "ni bon(ne), ni mauvais(e)",
+         "mauvais(e)")
+lv2 <- c(
+  "tous les jours ou presque",
+  "1 ou 2 fois par semaine",
+  "1 ou 2 fois par mois",
+  "1 ou 2 fois depuis 6 mois",
+  "jamais depuis 6 mois"
+)
+lv3 <- c("en permanence", "souvent", "parfois", "rarement", "jamais")
+lv4 <- c("très dur", "dur", "ni facile, ni dur", "facile", "très facile")
+lv5 <- c(
+  "largement insuffisantes",
+  "plutôt insuffisantes",
+  "adaptées",
+  "plus importantes que nécessaire",
+  "largement plus importantes que nécessaire"
+)
+lv6 <- c(
+  "me contrarie fortement",
+  "ne me convient pas" ,
+  "je fais avec",
+  "me convient",
+  "contribue à mon épanouissement"
+)
+lv7 <- c("non",
+         "pas du tout",
+         "plutôt non",
+         "ni oui",
+         "ni non",
+         "plutôt oui",
+         "oui, tout à fait")
+lvf <- c(
+  "Très satisfait(e)",
+  "Plutôt satisfait(e)",
+  "Plutôt insatisfait(e)",
+  "Très insatisfait(e)"
+)
+satin <-  rbind(tt0, tt3)
+satin <- rbind(satin, tt7) |>
+  lyk(n1 = 13, n2 = 16, lv = lv1) |>
+  lyk(n1 = 18, n2 = 25, lv = lv2) |>
+  lyk(n1 = 26, n2 = 28, lv = lv3) |>
+  lyk(n1 = 29, n2 = 32, lv = lv4) |>
+  lyk(n1 = 33, n2 = 36, lv = lv5) |>
+  lyk(n1 = 37, n2 = 75, lv = lv6) |>
+  lyk(n1 = 76, n2 = 77, lv = lv7)
+#
+#---------------------------------
+#
+
+final <- read_ods("datas/final.ods", sheet = 1) |>
+  janitor::clean_names() |>
+  mutate(across(where(is.character), as.factor)) |>
+  lyk(n1 = 3, n2 = 14, lv = lvf)
+
+save(tt, satin, final, file = "datas/fitw.RData")
+load("datas/fitw.RData")
+
+```
+
+
+```{r}
+#| label: setup
+
+rm(list = ls())
+#
+library(baseph)
+library(tidyverse)
+library(gtsummary)
+library(kableExtra)
+library(forestmodel)
+library(labelled)
+library(epiDisplay)
+library(visdat)
+library(GGally)
+library(ggridges)
+library(ggsci)
+library(tidytext)
+library(readODS)
+library(purrr)
+#
+theme_gtsummary_language(language = "fr", decimal.mark = ",")
+options(OutDec = ",")
+#
+load("datas/fitw.RData")
+expx <- FALSE
+#
+cat <- list(all_continuous() ~ "wilcox.test",
+            all_categorical() ~ "chisq.test")
+affl <- list(all_categorical() ~ "{n}/{N} ({p})")
+```
+
+
+```{r}
+#| label :  macro html
+
+htht <- function(aa) {
+aa <- aa |>
+bold_labels() |> 
+as_kable_extra() |>
+kable_material(c("striped", "hover")) |>
+column_spec(1, width = "3em")
+return(aa)
+}
+```
+
+**Investigateur Principal :** Djeneba CAMARA
+
+**Chef de projet :** Mathilde WLODARCZYK
+
+# Description des données
+
+## Données démographiques
+
+```{r}
+#| label: tbl-demo
+#| tbl-cap: Données démographiques
+
+tt |> 
+  dplyr::select(age,sexe,trajet) |> 
+  tbl_summary(type = list(age~"continuous")) |> 
+   modify_header(label ~ " ") |>
+  htht() 
+```
+
+
+
+```{r}
+#| label: fig-pyr
+#| fig-cap: Pyramide des âges
+
+pyramid(tt$age,tt$sexe,
+        binwidth = 10,
+        col.gender = c("pink","lightblue"),
+        main = "Pyramide de âges")
+```
+
+## Activité physique
+
+### En jours par semaine
+
+```{r}
+#| label: tbl-actsem
+#| tbl-cap: Activité physique (Jours/semaine)
+
+tt |> 
+  dplyr::select(ends_with("_j_sem"), "temps_assis") |>
+  tbl_summary(type = list(temps_assis~"continuous")) |> 
+    modify_header(label ~ "Jours/Semaine") |>
+    bold_labels()|> 
+  htht() |> 
+   scroll_box(width = "800px", height = "800px")
+
+```
+
+### En heures par jour
+
+```{r}
+#| label: tbl-actjpour
+#| tbl-cap: Activité physique par jour
+
+tt |> 
+  dplyr::select(ends_with("_h_j")) |>
+  tbl_summary(
+    type = everything() ~ "continuous"
+  ) |> 
+    modify_header(label ~ "Minutes/Jour") |>
+  htht() 
+```
+
+\clearpage
+
+## Raisons de l'adhésion
+
+Les réponses sont données par rapport au nombre total d'items notés en sachant qu'il peut y en avoir plusieurs pour chaque participant.
+
+```{r}
+#| label: tbl-raison
+#| tbl-cap: Raisons de l'adhésion
+
+zz <- str_split(tt$raison_adhesion, ";")
+zz <-  as.factor(unlist(zz))
+zz <-   tibble(zz)
+zz <- dplyr::filter(zz, zz != "") |>
+  mutate(zz = factor(zz)) |>
+  mutate(zz = fct_infreq(zz)) |>
+  mutate(zz = fct_lump_n(zz, 6, other_level = "Autres"))
+var_label(zz) <- "Raison de l'adhésion"
+
+zz |>
+  tbl_summary() |>
+  modify_header(label ~ "") |>
+  htht() 
+```
+
+# Questionnaire SATIN 
+
+
+## Vous & votre santé
+```{r}
+#| label: tbl-satin11
+#| tbl-cap: Vous & votre santé
+
+
+satin |>
+  dplyr::select(13:16, temps) |>
+  tbl_summary(by = temps) |>
+  modify_header(label ~ "") |>
+  htht() |>
+  scroll_box(width = "800px", height = "800px")
+```
+
+```{r}
+#| label: tbl-satin12
+#| tbl-cap: Vous & votre santé
+
+
+satin |> 
+  dplyr::select(18:25, temps) |> 
+  tbl_summary(by = temps) |> 
+      modify_header(label ~ "") |>
+  htht() |> 
+   scroll_box(width = "800px", height = "800px")
+```
+
+```{r}
+#| label: tbl-satin13
+#| tbl-cap: Vous & votre santé
+
+
+satin |>
+  dplyr::select(26:28, temps) |>
+  tbl_summary(by = temps) |>
+  modify_header(label ~ "") |>
+  htht() |>
+  scroll_box(width = "800px", height = "800px")
+```
+
+## Les EXIGENCES de VOTRE TRAVAIL et VOS CAPACITÉS
+
+```{r}
+#| label: tbl-satin21
+#| tbl-cap: Les EXIGENCES de VOTRE TRAVAIL et VOS CAPACITÉS
+
+
+satin |> 
+  dplyr::select(29:32, temps) |> 
+  tbl_summary(by = temps) |> 
+      modify_header(label ~ "") |>
+  htht() 
+```
+
+```{r}
+#| label: tbl-satin22
+#| tbl-cap: Face aux exigeances de mon travail
+
+
+satin |> 
+  dplyr::select(33:36, temps) |> 
+  tbl_summary(by = temps) |> 
+      modify_header(label ~ "Face aux exigeances de mon travail") |>
+  htht() 
+```
+
+## Les CARACTERISTIQUES de VOTRE ENVIRONNEMENT de TRAVAIL
+
+```{r}
+#| label: tbl-satin31
+#| tbl-cap: Environnement physique
+
+
+satin |> 
+  dplyr::select(37:42, temps) |> 
+  tbl_summary(by = temps) |> 
+      modify_header(label ~ "Environnement physique") |>
+  htht() 
+```
+
+```{r}
+#| label: tbl-satin32
+#| tbl-cap: Activité
+
+
+satin |> 
+  dplyr::select(43:49, temps) |> 
+  tbl_summary(by = temps) |> 
+      modify_header(label ~ "Activité") |>
+  htht() 
+```
+
+```{r}
+#| label: tbl-satin33
+#| tbl-cap: Cadrage de l’activité
+
+
+satin |> 
+  dplyr::select(50:62, temps) |> 
+  tbl_summary(by = temps) |> 
+      modify_header(label ~ "Cadrage de l’activité") |>
+  htht() 
+```
+
+```{r}
+#| label: tbl-satin34
+#| tbl-cap: Contexte organisationnel
+
+
+satin |> 
+  dplyr::select(63:75, temps) |> 
+  tbl_summary(by = temps) |> 
+      modify_header(label ~ "Contexte organisationnel") |>
+  htht() 
+```
+
+## VOTRE APPRÉCIATION GÉNÉRALE sur VOTRE TRAVAIL
+
+```{r}
+#| label: tbl-satin41
+#| tbl-cap: Appréciation générale
+
+
+satin |> 
+  dplyr::select(76:77, temps) |> 
+  tbl_summary(by = temps) |> 
+      modify_header(label ~ "") |>
+  htht() 
+```
+
+# Satisfaction
+
+## Objectifs
+
+```{r}
+#| label: tbl-final1
+#| tbl-cap: Appréciation générale
+
+ff <- final |>
+  dplyr::select(3:14) |>
+  pivot_longer(everything(), names_to = "Item", values_to = "Réponse")
+ff$Item <- str_replace_all(ff$Item, "_", " ")
+ ff |> 
+   tbl_cross(percent = "row", 
+            margin = "row") |> 
+      modify_header(label ~ "") |>
+  htht() |> 
+   scroll_box(width = "150%", height = "900px")
+  
+```
+
+## Objectifs atteints
+
+Les réponses sont données par rapport au nombre total d'items notés en sachant qu'il peut y en avoir plusieurs pour chaque participant.
+
+```{r}
+#| label: tbl-final2
+#| tbl-cap: Objectifs atteints
+
+zz <- str_split(final$objectifs_atteints, ";")
+zz <-  as.factor(unlist(zz))
+zz <-   tibble(zz)
+zz <- dplyr::filter(zz, zz != "") |>
+  mutate(zz = factor(zz)) |>
+  mutate(zz = fct_infreq(zz)) |>
+  mutate(zz = fct_lump_n(zz, 6, other_level = "Autres"))
+var_label(zz) <- "Objectifs atteints"
+zz |>
+  tbl_summary() |>
+  modify_header(label ~ "") |>
+  htht() 
+```
+
+:::
+
