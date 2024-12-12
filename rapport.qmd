@@ -2,8 +2,6 @@
 subtitle: "Rapport d'analyse"
 ---
 
-# Introduction
-
 ```{r}
 #| label: setup
 
@@ -51,6 +49,8 @@ tt |>
   gexptabph(exp = expx, nomfich = classeur, nomsheet= "demo",lg = TRUE)
 ```
 
+
+
 ```{r}
 #| label: fig-pyr
 #| fig-cap: Pyramide des âges
@@ -58,5 +58,201 @@ tt |>
 pyramid(tt$age,tt$sexe, binwidth = 10, col.gender = c("pink","lightblue"), main = "Pyramide de âges")
 ```
 
+## Activité physique
+
+### En jours par semaine
+
+```{r}
+#| label: tbl-actsem
+#| tbl-cap: Activité physique (Jours/semaine)
+
+tt |> 
+  dplyr::select(ends_with("_j_sem"), "temps_assis") |>
+  tbl_summary(type = list(temps_assis~"continuous")) |> 
+    modify_header(label ~ "Jours/Semaine") |>
+    bold_labels() |> 
+  gexptabph(exp = expx, nomfich = classeur, nomsheet= "actp",lg = TRUE)
+
+```
+
+### En heures par jour
+
+```{r}
+#| label: tbl-actjpour
+#| tbl-cap: Activité physique par jour
+
+tt |> 
+  dplyr::select(ends_with("_h_j")) |>
+  tbl_summary(
+    type = everything() ~ "continuous"
+  ) |> 
+    modify_header(label ~ "Minutes/Jour") |>
+    bold_labels() |> 
+  gexptabph(exp = expx, nomfich = classeur, nomsheet= "actj",lg = TRUE)
+```
+
+\clearpage
+
+## Raisons de l'adhésion
+
+```{r}
+#| label: tbl-raison
+#| tbl-cap: Raisons de l'adhésion
+
+zz <- str_split(tt$raison_adhesion, ";")
+zz <-  as.factor(unlist(zz))
+zz <-   tibble(zz)
+zz <- dplyr::filter(zz, zz != "") |> 
+  mutate(zz = factor(zz)) |> 
+  mutate(zz = fct_infreq(zz)) |> 
+mutate(zz= fct_lump_n(zz, 6))
+var_label(zz) <- "Raison de l'adhésion"
+
+zz |> 
+  tbl_summary() |> 
+      modify_header(label ~ "") |>
+    bold_labels() |> 
+  gexptabph(exp = expx, nomfich = classeur, nomsheet= "raison",lg = TRUE)
+```
+
+# Questionnaire SATIN 
 
 
+## Vous & votre santé
+```{r}
+#| label: tbl-satin11
+#| tbl-cap: Vous & votre santé
+
+
+satin |> 
+  dplyr::select(13:16, temps) |> 
+  tbl_summary(by = temps) |> 
+      modify_header(label ~ "") |>
+    bold_labels() |> 
+  gexptabph(exp = expx, nomfich = classeur, nomsheet= "satin11",lg = TRUE)
+```
+
+```{r}
+#| label: tbl-satin12
+#| tbl-cap: Vous & votre santé
+
+
+satin |> 
+  dplyr::select(18:25, temps) |> 
+  tbl_summary(by = temps) |> 
+      modify_header(label ~ "") |>
+    bold_labels() |> 
+  gexptabph(exp = expx, nomfich = classeur, nomsheet= "satin12",lg = FALSE)
+```
+
+```{r}
+#| label: tbl-satin13
+#| tbl-cap: Vous & votre santé
+
+
+satin |> 
+  dplyr::select(26:28, temps) |> 
+  tbl_summary(by = temps) |> 
+      modify_header(label ~ "") |>
+    bold_labels() |> 
+  gexptabph(exp = expx, nomfich = classeur, nomsheet= "satin13",lg = FALSE)
+```
+
+## Les EXIGENCES de VOTRE TRAVAIL et VOS CAPACITÉS
+
+```{r}
+#| label: tbl-satin21
+#| tbl-cap: Les EXIGENCES de VOTRE TRAVAIL et VOS CAPACITÉS
+
+
+satin |> 
+  dplyr::select(29:32, temps) |> 
+  tbl_summary(by = temps) |> 
+      modify_header(label ~ "") |>
+    bold_labels() |> 
+  gexptabph(exp = expx, nomfich = classeur, nomsheet= "satin21",lg = FALSE)
+```
+
+```{r}
+#| label: tbl-satin22
+#| tbl-cap: Face aux exigeances de mon travail
+
+
+satin |> 
+  dplyr::select(33:36, temps) |> 
+  tbl_summary(by = temps) |> 
+      modify_header(label ~ "Face aux exigeances de mon travail") |>
+    bold_labels() |> 
+  gexptabph(exp = expx, nomfich = classeur, nomsheet= "satin22",lg = TRUE)
+```
+
+\clearpage
+## Les CARACTERISTIQUES de VOTRE ENVIRONNEMENT de TRAVAIL
+
+```{r}
+#| label: tbl-satin31
+#| tbl-cap: Environnement physique
+
+
+satin |> 
+  dplyr::select(37:42, temps) |> 
+  tbl_summary(by = temps) |> 
+      modify_header(label ~ "Environnement physique") |>
+    bold_labels() |> 
+  gexptabph(exp = expx, nomfich = classeur, nomsheet= "satin31",lg = FALSE)
+```
+
+```{r}
+#| label: tbl-satin32
+#| tbl-cap: Activité
+
+
+satin |> 
+  dplyr::select(43:49, temps) |> 
+  tbl_summary(by = temps) |> 
+      modify_header(label ~ "Activité") |>
+    bold_labels() |> 
+  gexptabph(exp = expx, nomfich = classeur, nomsheet= "satin32", lg = FALSE)
+```
+
+```{r}
+#| label: tbl-satin33
+#| tbl-cap: Cadrage de l’activité
+
+
+satin |> 
+  dplyr::select(50:62, temps) |> 
+  tbl_summary(by = temps) |> 
+      modify_header(label ~ "Cadrage de l’activité") |>
+    bold_labels() |> 
+  gexptabph(exp = expx, nomfich = classeur, nomsheet= "satin33", lg = FALSE)
+```
+
+```{r}
+#| label: tbl-satin34
+#| tbl-cap: Contexte organisationnel
+
+
+satin |> 
+  dplyr::select(63:75, temps) |> 
+  tbl_summary(by = temps) |> 
+      modify_header(label ~ "Contexte organisationnel") |>
+    bold_labels() |> 
+  gexptabph(exp = expx, nomfich = classeur, nomsheet= "satin34", lg = FALSE)
+```
+
+## VOTRE APPRÉCIATION GÉNÉRALE sur VOTRE TRAVAIL
+
+```{r}
+#| label: tbl-satin41
+#| tbl-cap: Appréciation générale
+
+
+satin |> 
+  dplyr::select(76:77, temps) |> 
+  tbl_summary(by = temps) |> 
+      modify_header(label ~ "") |>
+    bold_labels(+
+                  ) |> 
+  gexptabph(exp = expx, nomfich = classeur, nomsheet= "satin41", lg = TRUE)
+```
