@@ -19,15 +19,17 @@ library(GGally)
 library(ggridges)
 library(ggsci)
 library(tidytext)
+library(readODS)
 library(purrr)
 #
 theme_gtsummary_language(language = "fr", decimal.mark = ",")
 options(OutDec = ",")
 #
 load("datas/fitw.RData")
-expx <- FALSE
-classeur <- "fitw"
-if (expx){system(paste0("rm -f ",classeur))}
+expx <- TRUE
+classeur <- "fitw.ods"
+write_ods(iris,classeur)
+#if (expx){system(paste0("rm -f ",classeur))}
 #
 cat <- list(all_continuous() ~ "wilcox.test", all_categorical() ~ "chisq.test")
 affl <- list(all_categorical()~"{n}/{N} ({p})")
