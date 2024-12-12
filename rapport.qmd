@@ -95,6 +95,8 @@ tt |>
 
 ## Raisons de l'adhésion
 
+Les réponses sont données par rapport au nombre total d'items notés en sachant qu'il peut y en avoir plusieurs pour chaque participant.
+
 ```{r}
 #| label: tbl-raison
 #| tbl-cap: Raisons de l'adhésion
@@ -105,7 +107,7 @@ zz <-   tibble(zz)
 zz <- dplyr::filter(zz, zz != "") |> 
   mutate(zz = factor(zz)) |> 
   mutate(zz = fct_infreq(zz)) |> 
-mutate(zz= fct_lump_n(zz, 6))
+mutate(zz= fct_lump_n(zz, 6, other_level = "Autres"))
 var_label(zz) <- "Raison de l'adhésion"
 
 zz |> 
@@ -241,6 +243,7 @@ satin |>
   gexptabph(exp = expx, nomfich = classeur, nomsheet= "satin34", lg = FALSE)
 ```
 
+\clearpage
 ## VOTRE APPRÉCIATION GÉNÉRALE sur VOTRE TRAVAIL
 
 ```{r}
@@ -252,7 +255,54 @@ satin |>
   dplyr::select(76:77, temps) |> 
   tbl_summary(by = temps) |> 
       modify_header(label ~ "") |>
-    bold_labels(+
-                  ) |> 
-  gexptabph(exp = expx, nomfich = classeur, nomsheet= "satin41", lg = TRUE)
+    bold_labels() |> 
+  gexptabph(exp = expx, nomfich = classeur, nomsheet= "satin41", lg = FALSE)
 ```
+
+# Satisfaction
+
+
+
+## Objectifs
+
+
+```{r}
+#| label: tbl-final1
+#| tbl-cap: Appréciation générale
+
+final |>
+  dplyr::select(3:14) |>
+  pivot_longer(everything(), names_to = "Item", values_to = "Réponse") |> 
+  tbl_cross(percent = "row", 
+            margin = "row") |> 
+      modify_header(label ~ "") |>
+    bold_labels() |> 
+  gexptabph(exp = expx, nomfich = classeur, nomsheet= "finalsatisf", lg = FALSE)
+```
+
+\clearpage
+## Objectifs atteints
+
+Les réponses sont données par rapport au nombre total d'items notés en sachant qu'il peut y en avoir plusieurs pour chaque participant.
+
+```{r}
+#| label: tbl-final2
+#| tbl-cap: Objectifs atteints
+
+zz <- str_split(final$objectifs_atteints, ";") 
+zz <-  as.factor(unlist(zz))
+zz <-   tibble(zz)
+zz <- dplyr::filter(zz, zz != "") |> 
+  mutate(zz = factor(zz)) |> 
+  mutate(zz = fct_infreq(zz)) |> 
+mutate(zz= fct_lump_n(zz, 6, other_level = "Autres")) 
+var_label(zz) <- "Objectifs atteints"
+zz |> 
+  tbl_summary() |> 
+      modify_header(label ~ "") |>
+    bold_labels() |> 
+  gexptabph(exp = expx, nomfich = classeur, nomsheet= "finalobj", lg = FALSE)
+```
+
+
+

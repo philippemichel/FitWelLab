@@ -68,6 +68,7 @@ lv4 <- c("très dur", "dur", "ni facile, ni dur","facile", "très facile")
 lv5 <- c("largement insuffisantes", "plutôt insuffisantes", "adaptées", "plus importantes que nécessaire", "largement plus importantes que nécessaire")
 lv6 <- c("me contrarie fortement", "ne me convient pas" , "je fais avec", "me convient", "contribue à mon épanouissement")
 lv7 <- c("non", "pas du tout", "plutôt non", "ni oui", "ni non", "plutôt oui", "oui, tout à fait")
+lvf <- c("Très satisfait(e)", "Plutôt satisfait(e)", "Plutôt insatisfait(e)", "Très insatisfait(e)")
 satin <-  rbind(tt0,tt3)
 satin <- rbind(satin,tt7) |>
 lyk(n1 = 13, n2 = 16, lv = lv1) |>
@@ -77,9 +78,14 @@ lyk(n1 = 29, n2 = 32, lv = lv4) |>
 lyk(n1 = 33, n2 = 36, lv = lv5) |>
 lyk(n1 = 37, n2 = 75, lv = lv6) |>
 lyk(n1 = 76, n2 = 77, lv = lv7)
+#
+#---------------------------------
+#
 
+final <- read_ods("datas/final.ods", sheet = 1) |>
+  janitor::clean_names() |>
+  mutate(across(where(is.character), as.factor)) |>
+  lyk(n1 = 3, n2 = 14, lv = lvf)
 
-
-
-save(tt, satin,file = "datas/fitw.RData")
+save(tt, satin,final, file = "datas/fitw.RData")
 load("datas/fitw.RData")
