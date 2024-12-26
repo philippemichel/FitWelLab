@@ -5,6 +5,8 @@
 
 ![Static badge](https://img.shields.io/badge/PAS-termin%C3%A9-green)
 
+![Static badge](https://img.shields.io/badge/Rapport-termin%C3%A9-green)
+
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
 
 <!-- badges: end -->
@@ -15,3 +17,7 @@ Enquête de satisfaction
 
 **26/12/2024** Graphiques interactifs
                Exports en .ods des tableaux
+               
+# Résultats
+
+Le rapport est disponible [ici](rapport_h.html).
