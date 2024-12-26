@@ -13,6 +13,7 @@ author:
 format:
   html:
     page-layout: full
+    html-table-processing: none
     toc: true
     theme:
       light: cerulean
@@ -27,8 +28,7 @@ bibliography: stat.bib
 license: "MIT"
 ---
 
-::: {.panel-tabset}
-
+::: panel-tabset
 # Introduction
 
 **Impact de la section associative et sportive Section Athlé-NOVO sur le bien-être au travail des agents de l’hôpital NOVO**
@@ -164,12 +164,17 @@ final <- read_ods("datas/final.ods", sheet = 1) |>
   janitor::clean_names() |>
   mutate(across(where(is.character), as.factor)) |>
   lyk(n1 = 3, n2 = 14, lv = lvf)
+#
+bn <- read_ods("datas/nomsatin.ods", sheet = 1)
+var_label(satin) <- bn$value
+bn <- read_ods("datas/nomfinal.ods", sheet = 1)
+var_label(final) <- bn$fn
+# 
 
 save(tt, satin, final, file = "datas/fitw.RData")
 load("datas/fitw.RData")
 
 ```
-
 
 ```{r}
 #| label: setup
@@ -180,16 +185,16 @@ library(baseph)
 library(tidyverse)
 library(gtsummary)
 library(kableExtra)
-library(forestmodel)
+library(apyramid)
 library(labelled)
-library(epiDisplay)
+library(scales)
 library(visdat)
 library(GGally)
-library(ggridges)
+library(ggstats)
 library(ggsci)
+library(plotly)
 library(tidytext)
 library(readODS)
-library(purrr)
 #
 theme_gtsummary_language(language = "fr", decimal.mark = ",")
 options(OutDec = ",")
@@ -202,23 +207,49 @@ cat <- list(all_continuous() ~ "wilcox.test",
 affl <- list(all_categorical() ~ "{n}/{N} ({p})")
 ```
 
-
 ```{r}
-#| label :  macro html
+#| label:  macros
 
 htht <- function(aa) {
 aa <- aa |>
 bold_labels() |> 
-as_kable_extra() |>
-kable_material(c("striped", "hover")) |>
-column_spec(1, width = "3em")
+as_kable_extra(addtl_fmt = FALSE, escape = TRUE) |>
+kable_material(c("striped", "hover"))
+# column_spec(1, background = "green", width = "3em")
 return(aa)
+}
+
+tabsat <- function(df = satin, ni,ns, lab = ""){
+zz <- dplyr::select(df, ni:ns, temps) |> 
+  tbl_summary(by = temps) |> 
+      modify_header(label ~ lab) |>
+  htht() 
+return(zz)
+}
+
+likph <- function(df,nn, titre = ""){
+xx <-  df |> 
+  dplyr::select(nn) |> 
+  ggstats::gglikert() +
+  labs(title = titre) +
+  theme_light() +
+  scale_fill_jama() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+  axis.text.x = element_text(size = 10),
+  axis.text.y = element_text(size = 10),
+  legend.position = "bottom"
+  )
+ggplotly(xx) 
 }
 ```
 
 **Investigateur Principal :** Djeneba CAMARA
 
 **Chef de projet :** Mathilde WLODARCZYK
+
 
 # Description des données
 
@@ -235,16 +266,36 @@ tt |>
   htht() 
 ```
 
-
-
 ```{r}
 #| label: fig-pyr
 #| fig-cap: Pyramide des âges
 
-pyramid(tt$age,tt$sexe,
-        binwidth = 10,
-        col.gender = c("pink","lightblue"),
-        main = "Pyramide de âges")
+xx <- tt |> 
+  mutate(age = cut(age,
+  include.lowest = TRUE, c(20, 30, 40, 50, 60)))|> 
+age_pyramid(age_group = age, split_by = sexe) +
+  labs(title = "Pyramide des âges",
+      x = "",
+      y = "",
+      caption = "",
+      fill = "") +
+  theme_light() +
+  scale_fill_jama() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title.x = element_text(size = 12),
+    legend.title = element_text(size = 12),
+    axis.title.y = element_text(
+      size = 12,
+      angle = 0,
+      vjust = .5
+    ),
+  axis.text.x = element_text(size = 12),
+  axis.text.y = element_text(size = 12),
+  legend.position = "right"
+  )
+ggplotly(xx)
 ```
 
 ## Activité physique
@@ -290,153 +341,427 @@ Les réponses sont données par rapport au nombre total d'items notés en sachan
 #| label: tbl-raison
 #| tbl-cap: Raisons de l'adhésion
 
-zz <- str_split(tt$raison_adhesion, ";")
-zz <-  as.factor(unlist(zz))
-zz <-   tibble(zz)
-zz <- dplyr::filter(zz, zz != "") |>
-  mutate(zz = factor(zz)) |>
-  mutate(zz = fct_infreq(zz)) |>
-  mutate(zz = fct_lump_n(zz, 6, other_level = "Autres"))
-var_label(zz) <- "Raison de l'adhésion"
+zz <- tt|> 
+  separate_rows(raison_adhesion, sep = ";") |> 
+  mutate(raison_adhesion = factor(raison_adhesion)) |> 
+  dplyr::filter(raison_adhesion != "") |> 
+  mutate(raison_adhesion = fct_infreq(raison_adhesion)) |>
+  mutate(raison_adhesion = fct_lump_n(raison_adhesion, 6, other_level = "Autres"))
+var_label(zz$raison_adhesion) <- "Raison de l'adhésion"
 
 zz |>
+  dplyr::select(raison_adhesion) |> 
   tbl_summary() |>
   modify_header(label ~ "") |>
   htht() 
 ```
 
-# Questionnaire SATIN 
+# Questionnaire SATIN initial
+
+```{r}
+#| label: temps
+
+sat0 <- satin |> 
+  dplyr::filter(temps == "M0")
+
+ncas <- nrow(sat0)
+```
+
+
+L'étude porte sur `r ncas` cas.
+
+
+## VOTRE SITUATION PERSONNELLE et PROFESSIONNELLE
+
+
+```{r}
+#| label: tbl-sat0init
+#| tbl-cap: Données démographiques
+
+ sat0 |> 
+  dplyr::select(sexe:anciennete_dans_le_poste_actuel) |> 
+  tbl_summary() |> 
+   modify_header(label ~ " ") |>
+  htht() 
+```
 
 
 ## Vous & votre santé
+
 ```{r}
-#| label: tbl-satin11
+#| label: tbl-sat11
 #| tbl-cap: Vous & votre santé
 
-
-satin |>
-  dplyr::select(13:16, temps) |>
-  tbl_summary(by = temps) |>
-  modify_header(label ~ "") |>
-  htht() |>
-  scroll_box(width = "800px", height = "800px")
+ sat0 |> 
+  dplyr::select(13:16) |> 
+  tbl_likert() |> 
+    modify_header(label ~ " ") |> 
+  htht()
 ```
 
 ```{r}
-#| label: tbl-satin12
+#| label: fig-sat11
+#| fig-cap: Vous & votre santé
+
+likph(sat0, 13:16,"Vous & votre santé")
+```
+
+
+```{r}
+#| label: tbl-sat12
 #| tbl-cap: Vous & votre santé
 
-
-satin |> 
-  dplyr::select(18:25, temps) |> 
-  tbl_summary(by = temps) |> 
-      modify_header(label ~ "") |>
-  htht() |> 
-   scroll_box(width = "800px", height = "800px")
+ sat0 |> 
+  dplyr::select(17) |> 
+  tbl_likert() |> 
+    modify_header(label ~ " ") |> 
+  htht()
 ```
 
 ```{r}
-#| label: tbl-satin13
+#| label: fig-sat12
+#| fig-cap: Vous & votre santé
+
+likph(sat0, 17,"Vous & votre santé")
+```
+
+```{r}
+#| label: tbl-sat13
+#| tbl-cap: Vous & votre santé
+
+ sat0 |> 
+  dplyr::select(18:25) |> 
+  tbl_likert() |> 
+  modify_header(label ~ " ") |> 
+    htht()
+```
+
+```{r}
+#| label: fig-sat13
+#| fig-cap: Vous & votre santé
+#| 
+
+likph(sat0, 18:25,"Vous & votre santé")
+```
+
+```{r}
+#| label: tbl-sat14
 #| tbl-cap: Vous & votre santé
 
 
-satin |>
-  dplyr::select(26:28, temps) |>
-  tbl_summary(by = temps) |>
-  modify_header(label ~ "") |>
-  htht() |>
-  scroll_box(width = "800px", height = "800px")
+ sat0 |> 
+  dplyr::select(26:28) |> 
+  tbl_likert() |> 
+  modify_header(label ~ " ") |> 
+  htht()
+```
+
+```{r}
+#| label: fig-sat14
+#| fig-cap: Vous & votre santé
+
+likph(sat0, 26:28,"Vous & votre santé")
 ```
 
 ## Les EXIGENCES de VOTRE TRAVAIL et VOS CAPACITÉS
 
 ```{r}
-#| label: tbl-satin21
+#| label: tbl-sat21
 #| tbl-cap: Les EXIGENCES de VOTRE TRAVAIL et VOS CAPACITÉS
 
 
-satin |> 
-  dplyr::select(29:32, temps) |> 
-  tbl_summary(by = temps) |> 
-      modify_header(label ~ "") |>
-  htht() 
+likph(sat0, 29:32,"Les EXIGENCES de VOTRE TRAVAIL et VOS CAPACITÉS")
+
 ```
 
 ```{r}
-#| label: tbl-satin22
+#| label: fig-sat21
+#| fig-cap: Les EXIGENCES de VOTRE TRAVAIL et VOS CAPACITÉS
+
+likph(sat0, 29:32,"Les EXIGENCES de VOTRE TRAVAIL et VOS CAPACITÉS")
+```
+
+```{r}
+#| label: tbl-sat022
 #| tbl-cap: Face aux exigeances de mon travail
 
-
-satin |> 
-  dplyr::select(33:36, temps) |> 
-  tbl_summary(by = temps) |> 
-      modify_header(label ~ "Face aux exigeances de mon travail") |>
-  htht() 
+ sat0 |> 
+  dplyr::select(33:36) |>
+  tbl_likert() |> 
+  modify_header(label ~ " ") |> 
+  htht()
 ```
+
+```{r}
+#| label: fig-sat22
+#| fig-cap: Face aux exigeances de mon travail
+
+likph(sat0, 33:36,"Face aux exigeances de mon travail")
+```
+
 
 ## Les CARACTERISTIQUES de VOTRE ENVIRONNEMENT de TRAVAIL
 
 ```{r}
-#| label: tbl-satin31
+#| label: tbl-sat031
 #| tbl-cap: Environnement physique
 
-
-satin |> 
-  dplyr::select(37:42, temps) |> 
-  tbl_summary(by = temps) |> 
-      modify_header(label ~ "Environnement physique") |>
-  htht() 
+ sat0 |> 
+  dplyr::select(37:42) |>
+  tbl_likert() |> 
+  modify_header(label ~ "Environnement physique") |> 
+  htht()
 ```
 
+
 ```{r}
-#| label: tbl-satin32
-#| tbl-cap: Activité
+#| label: fig-sat31
+#| fig-cap: Environnement physique
 
-
-satin |> 
-  dplyr::select(43:49, temps) |> 
-  tbl_summary(by = temps) |> 
-      modify_header(label ~ "Activité") |>
-  htht() 
+likph(sat0, 37:42, "Environnement physique")
 ```
 
+
+
 ```{r}
-#| label: tbl-satin33
+#| label: tbl-sat032
 #| tbl-cap: Cadrage de l’activité
 
 
-satin |> 
-  dplyr::select(50:62, temps) |> 
-  tbl_summary(by = temps) |> 
-      modify_header(label ~ "Cadrage de l’activité") |>
-  htht() 
+ sat0 |> 
+  dplyr::select(43:49) |>
+  tbl_likert() |> 
+  modify_header(label ~ "Cadrage de l’activité") |> 
+  htht()
+
 ```
 
 ```{r}
-#| label: tbl-satin34
+#| label: fig-sat32
+#| fig-cap: Cadrage de l’activité
+
+
+likph(sat0, 43:49, "Cadrage de l’activité")
+```
+
+
+```{r}
+#| label: tbl-sat033
+#| tbl-cap: Cadrage de l’activité
+
+ sat0 |> 
+  dplyr::select(50:62) |>
+  tbl_likert() |> 
+  modify_header(label ~ "Cadrage de l’activité") |> 
+  htht()
+```
+
+```{r}
+#| label: fig-sat33
+#| fig-cap: Cadrage de l’activité
+
+likph(sat0, 50:62, "Cadrage de l’activité")
+```
+
+```{r}
+#| label: tbl-sat034
 #| tbl-cap: Contexte organisationnel
 
-
-satin |> 
-  dplyr::select(63:75, temps) |> 
-  tbl_summary(by = temps) |> 
-      modify_header(label ~ "Contexte organisationnel") |>
-  htht() 
+ sat0 |> 
+  dplyr::select(63:75) |>
+  tbl_likert() |> 
+  modify_header(label ~ "Contexte organisationnel") |> 
+  htht()
 ```
+
+
+```{r}
+#| label: fig-sat34
+#| fig-cap: Contexte organisationnel
+
+likph(sat0, 63:75, "Contexte organisationnel")
+```
+
 
 ## VOTRE APPRÉCIATION GÉNÉRALE sur VOTRE TRAVAIL
 
 ```{r}
-#| label: tbl-satin41
+#| label: tbl-sat041
 #| tbl-cap: Appréciation générale
 
-
-satin |> 
-  dplyr::select(76:77, temps) |> 
-  tbl_summary(by = temps) |> 
-      modify_header(label ~ "") |>
-  htht() 
+ sat0 |> 
+  dplyr::select(76:77) |>
+  tbl_likert() |> 
+  modify_header(label ~ " ") |> 
+  htht()
 ```
+
+
+```{r}
+#| label: fig-sat041
+#| fig-cap: Appréciation générale
+
+likph(sat0, 76:77, "Appréciation générale")
+```
+
+
+# Questionnaire SATIN à 7 mois
+
+```{r}
+#| label: temps7
+
+sat7 <- satin |> 
+  dplyr::filter(temps == "M7")
+
+ncas <- nrow(sat7)
+```
+
+L'étude porte sur `r ncas` cas. En raison du faible nombre de réponse aucun graphique n'est traçable.
+
+
+## Vous & votre santé
+
+```{r}
+#| label: tbl-sat117
+#| tbl-cap: Vous & votre santé
+
+ sat7 |> 
+  dplyr::select(13:16) |> 
+  tbl_likert() |> 
+    modify_header(label ~ " ") |> 
+  htht()
+```
+
+
+```{r}
+#| label: tbl-sat127
+#| tbl-cap: Vous & votre santé
+
+ sat7 |> 
+  dplyr::select(17) |> 
+  tbl_likert() |> 
+    modify_header(label ~ " ") |> 
+  htht()
+```
+
+
+
+```{r}
+#| label: tbl-sat137
+#| tbl-cap: Vous & votre santé
+
+ sat7 |> 
+  dplyr::select(18:25) |> 
+  tbl_likert() |> 
+  modify_header(label ~ " ") |> 
+    htht()
+```
+
+
+```{r}
+#| label: tbl-sat147
+#| tbl-cap: Vous & votre santé
+
+ sat7 |> 
+  dplyr::select(26:28) |> 
+  tbl_likert() |> 
+  modify_header(label ~ " ") |> 
+  htht()
+```
+
+
+## Les EXIGENCES de VOTRE TRAVAIL et VOS CAPACITÉS
+
+```{r}
+#| label: tbl-sat217
+#| tbl-cap: Les EXIGENCES de VOTRE TRAVAIL et VOS CAPACITÉS
+
+ sat7 |> 
+  dplyr::select(29:32) |>
+  tbl_likert() |> 
+  modify_header(label ~ "Mon travail est") |> 
+  htht()
+```
+
+
+```{r}
+#| label: tbl-sat7227
+#| tbl-cap: Face aux exigeances de mon travail
+
+ sat7 |> 
+  dplyr::select(33:36) |>
+  tbl_likert() |> 
+  modify_header(label ~ " ") |> 
+  htht()
+```
+
+
+
+## Les CARACTERISTIQUES de VOTRE ENVIRONNEMENT de TRAVAIL
+
+```{r}
+#| label: tbl-sat7317
+#| tbl-cap: Environnement physique
+
+ sat7 |> 
+  dplyr::select(37:42) |>
+  tbl_likert() |> 
+  modify_header(label ~ "Environnement physique") |> 
+  htht()
+```
+
+
+
+```{r}
+#| label: tbl-sat7327
+#| tbl-cap: Cadrage de l’activité
+
+
+ sat7 |> 
+  dplyr::select(43:49) |>
+  tbl_likert() |> 
+  modify_header(label ~ "Cadrage de l’activité") |> 
+  htht()
+
+```
+
+```{r}
+#| label: tbl-sat7337
+#| tbl-cap: Cadrage de l’activité
+
+ sat7 |> 
+  dplyr::select(50:62) |>
+  tbl_likert() |> 
+  modify_header(label ~ "Cadrage de l’activité") |> 
+  htht()
+```
+
+```{r}
+#| label: tbl-sat7347
+#| tbl-cap: Contexte organisationnel
+
+ sat7 |> 
+  dplyr::select(63:75) |>
+  tbl_likert() |> 
+  modify_header(label ~ "Contexte organisationnel") |> 
+  htht()
+```
+
+
+
+## VOTRE APPRÉCIATION GÉNÉRALE sur VOTRE TRAVAIL
+
+```{r}
+#| label: tbl-satin417
+#| tbl-cap: Appréciation générale
+
+sat7 |> 
+  dplyr::select(76:77) |>
+  tbl_likert() |> 
+  modify_header(label ~ " ") |> 
+  htht()
+```
+
 
 # Satisfaction
 
@@ -446,17 +771,22 @@ satin |>
 #| label: tbl-final1
 #| tbl-cap: Appréciation générale
 
-ff <- final |>
+
+final |> 
   dplyr::select(3:14) |>
-  pivot_longer(everything(), names_to = "Item", values_to = "Réponse")
-ff$Item <- str_replace_all(ff$Item, "_", " ")
- ff |> 
-   tbl_cross(percent = "row", 
-            margin = "row") |> 
-      modify_header(label ~ "") |>
+  tbl_likert() |> 
+  modify_header(label ~ " ") |> 
   htht() |> 
    scroll_box(width = "150%", height = "900px")
-  
+```
+é
+```{r}
+#| label: fig-final1
+#| fig-cap: Appréciation générale
+
+final |> 
+  dplyr::select(3:14) |>
+  ggstats::gglikert()
 ```
 
 ## Objectifs atteints
@@ -481,5 +811,38 @@ zz |>
   htht() 
 ```
 
-:::
+```{r}
+#| label: fig-final2
+#| fig-cap: Objectifs atteints
 
+xx <- zz |> 
+  ggplot() +
+  aes(x = zz, fill = zz) +
+  geom_bar(stat = "count") +
+  labs(title = "Objectifs atteints",
+      subtitle = "",
+      x = "",
+      y = "n") +
+  theme_light() +
+  scale_fill_jama() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title.x = element_blank(),
+    legend.title = element_text(size = 12),
+    axis.title.y = element_text(
+      size = 12,
+      angle = 0,
+      vjust = .5
+    ),
+  axis.text.x = element_text(size = 12,            ,
+      angle = 30,
+      vjust = .5),
+  axis.text.y = element_text(size = 12),
+  legend.position = "none"
+  ) +
+  scale_x_discrete(labels = label_wrap(20))
+
+ggplotly(xx)
+```
+:::
