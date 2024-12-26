@@ -200,7 +200,8 @@ theme_gtsummary_language(language = "fr", decimal.mark = ",")
 options(OutDec = ",")
 #
 load("datas/fitw.RData")
-expx <- FALSE
+expx <- TRUE
+nfic <- "fitw2.ods"
 #
 cat <- list(all_continuous() ~ "wilcox.test",
             all_categorical() ~ "chisq.test")
@@ -210,22 +211,19 @@ affl <- list(all_categorical() ~ "{n}/{N} ({p})")
 ```{r}
 #| label:  macros
 
-htht <- function(aa) {
+htht <- function(aa, exp, nomfich, nomsheet) {
+    if (exp) {
+      aa |>
+        as_tibble() |>
+        write_ods(path = nomfich, sheet = nomsheet, append = TRUE)
+    } 
 aa <- aa |>
 bold_labels() |> 
 as_kable_extra(addtl_fmt = FALSE, escape = TRUE) |>
 kable_material(c("striped", "hover"))
-# column_spec(1, background = "green", width = "3em")
 return(aa)
 }
 
-tabsat <- function(df = satin, ni,ns, lab = ""){
-zz <- dplyr::select(df, ni:ns, temps) |> 
-  tbl_summary(by = temps) |> 
-      modify_header(label ~ lab) |>
-  htht() 
-return(zz)
-}
 
 likph <- function(df,nn, titre = ""){
 xx <-  df |> 
@@ -263,7 +261,7 @@ tt |>
   dplyr::select(age,sexe,trajet) |> 
   tbl_summary(type = list(age~"continuous")) |> 
    modify_header(label ~ " ") |>
-  htht() 
+  htht(exp = expx, nomfich = nfic , nomsheet = "demog") 
 ```
 
 ```{r}
@@ -311,7 +309,7 @@ tt |>
   tbl_summary(type = list(temps_assis~"continuous")) |> 
     modify_header(label ~ "Jours/Semaine") |>
     bold_labels()|> 
-  htht() |> 
+  htht(exp = expx, nomfich = nfic , nomsheet = "actsem")  |> 
    scroll_box(width = "800px", height = "800px")
 
 ```
@@ -328,7 +326,7 @@ tt |>
     type = everything() ~ "continuous"
   ) |> 
     modify_header(label ~ "Minutes/Jour") |>
-  htht() 
+  htht(exp = expx, nomfich = nfic , nomsheet = "actjour")
 ```
 
 \clearpage
@@ -353,7 +351,7 @@ zz |>
   dplyr::select(raison_adhesion) |> 
   tbl_summary() |>
   modify_header(label ~ "") |>
-  htht() 
+  htht(exp = expx, nomfich = nfic , nomsheet = "raison")
 ```
 
 # Questionnaire SATIN initial
@@ -382,7 +380,7 @@ L'étude porte sur `r ncas` cas.
   dplyr::select(sexe:anciennete_dans_le_poste_actuel) |> 
   tbl_summary() |> 
    modify_header(label ~ " ") |>
-  htht() 
+  htht(exp = expx, nomfich = nfic , nomsheet = "sat00init") 
 ```
 
 
@@ -396,7 +394,7 @@ L'étude porte sur `r ncas` cas.
   dplyr::select(13:16) |> 
   tbl_likert() |> 
     modify_header(label ~ " ") |> 
-  htht()
+  htht(exp = expx, nomfich = nfic , nomsheet = "sat011")
 ```
 
 ```{r}
@@ -415,7 +413,7 @@ likph(sat0, 13:16,"Vous & votre santé")
   dplyr::select(17) |> 
   tbl_likert() |> 
     modify_header(label ~ " ") |> 
-  htht()
+  htht(exp = expx, nomfich = nfic , nomsheet = "sat012")
 ```
 
 ```{r}
@@ -433,7 +431,7 @@ likph(sat0, 17,"Vous & votre santé")
   dplyr::select(18:25) |> 
   tbl_likert() |> 
   modify_header(label ~ " ") |> 
-    htht()
+  htht(exp = expx, nomfich = nfic , nomsheet = "sat013")
 ```
 
 ```{r}
@@ -453,7 +451,7 @@ likph(sat0, 18:25,"Vous & votre santé")
   dplyr::select(26:28) |> 
   tbl_likert() |> 
   modify_header(label ~ " ") |> 
-  htht()
+  htht(exp = expx, nomfich = nfic , nomsheet = "sat014")
 ```
 
 ```{r}
@@ -470,7 +468,11 @@ likph(sat0, 26:28,"Vous & votre santé")
 #| tbl-cap: Les EXIGENCES de VOTRE TRAVAIL et VOS CAPACITÉS
 
 
-likph(sat0, 29:32,"Les EXIGENCES de VOTRE TRAVAIL et VOS CAPACITÉS")
+ sat0 |> 
+  dplyr::select(29:32) |>
+  tbl_likert() |> 
+  modify_header(label ~ " ") |> 
+  htht(exp = expx, nomfich = nfic , nomsheet = "sat021")
 
 ```
 
@@ -489,7 +491,7 @@ likph(sat0, 29:32,"Les EXIGENCES de VOTRE TRAVAIL et VOS CAPACITÉS")
   dplyr::select(33:36) |>
   tbl_likert() |> 
   modify_header(label ~ " ") |> 
-  htht()
+  htht(exp = expx, nomfich = nfic , nomsheet = "sat022")
 ```
 
 ```{r}
@@ -510,7 +512,7 @@ likph(sat0, 33:36,"Face aux exigeances de mon travail")
   dplyr::select(37:42) |>
   tbl_likert() |> 
   modify_header(label ~ "Environnement physique") |> 
-  htht()
+  htht(exp = expx, nomfich = nfic , nomsheet = "")
 ```
 
 
@@ -532,7 +534,7 @@ likph(sat0, 37:42, "Environnement physique")
   dplyr::select(43:49) |>
   tbl_likert() |> 
   modify_header(label ~ "Cadrage de l’activité") |> 
-  htht()
+  htht(exp = expx, nomfich = nfic , nomsheet = "sat032")
 
 ```
 
@@ -553,7 +555,7 @@ likph(sat0, 43:49, "Cadrage de l’activité")
   dplyr::select(50:62) |>
   tbl_likert() |> 
   modify_header(label ~ "Cadrage de l’activité") |> 
-  htht()
+  htht(exp = expx, nomfich = nfic , nomsheet = "sat033")
 ```
 
 ```{r}
@@ -571,7 +573,7 @@ likph(sat0, 50:62, "Cadrage de l’activité")
   dplyr::select(63:75) |>
   tbl_likert() |> 
   modify_header(label ~ "Contexte organisationnel") |> 
-  htht()
+  htht(exp = expx, nomfich = nfic , nomsheet = "sat034")
 ```
 
 
@@ -593,7 +595,7 @@ likph(sat0, 63:75, "Contexte organisationnel")
   dplyr::select(76:77) |>
   tbl_likert() |> 
   modify_header(label ~ " ") |> 
-  htht()
+  htht(exp = expx, nomfich = nfic , nomsheet = "sat041")
 ```
 
 
@@ -629,7 +631,7 @@ L'étude porte sur `r ncas` cas. En raison du faible nombre de réponse aucun gr
   dplyr::select(13:16) |> 
   tbl_likert() |> 
     modify_header(label ~ " ") |> 
-  htht()
+  htht(exp = expx, nomfich = nfic , nomsheet = "sat711")
 ```
 
 
@@ -641,7 +643,7 @@ L'étude porte sur `r ncas` cas. En raison du faible nombre de réponse aucun gr
   dplyr::select(17) |> 
   tbl_likert() |> 
     modify_header(label ~ " ") |> 
-  htht()
+  htht(exp = expx, nomfich = nfic , nomsheet = "sat712")
 ```
 
 
@@ -654,7 +656,7 @@ L'étude porte sur `r ncas` cas. En raison du faible nombre de réponse aucun gr
   dplyr::select(18:25) |> 
   tbl_likert() |> 
   modify_header(label ~ " ") |> 
-    htht()
+    htht(exp = expx, nomfich = nfic , nomsheet = "sat713")
 ```
 
 
@@ -666,7 +668,7 @@ L'étude porte sur `r ncas` cas. En raison du faible nombre de réponse aucun gr
   dplyr::select(26:28) |> 
   tbl_likert() |> 
   modify_header(label ~ " ") |> 
-  htht()
+  htht(exp = expx, nomfich = nfic , nomsheet = "sat714")
 ```
 
 
@@ -680,7 +682,7 @@ L'étude porte sur `r ncas` cas. En raison du faible nombre de réponse aucun gr
   dplyr::select(29:32) |>
   tbl_likert() |> 
   modify_header(label ~ "Mon travail est") |> 
-  htht()
+  htht(exp = expx, nomfich = nfic , nomsheet = "sat721")
 ```
 
 
@@ -692,7 +694,7 @@ L'étude porte sur `r ncas` cas. En raison du faible nombre de réponse aucun gr
   dplyr::select(33:36) |>
   tbl_likert() |> 
   modify_header(label ~ " ") |> 
-  htht()
+  htht(exp = expx, nomfich = nfic , nomsheet = "sat722")
 ```
 
 
@@ -707,7 +709,7 @@ L'étude porte sur `r ncas` cas. En raison du faible nombre de réponse aucun gr
   dplyr::select(37:42) |>
   tbl_likert() |> 
   modify_header(label ~ "Environnement physique") |> 
-  htht()
+  htht(exp = expx, nomfich = nfic , nomsheet = "sat731")
 ```
 
 
@@ -721,7 +723,7 @@ L'étude porte sur `r ncas` cas. En raison du faible nombre de réponse aucun gr
   dplyr::select(43:49) |>
   tbl_likert() |> 
   modify_header(label ~ "Cadrage de l’activité") |> 
-  htht()
+  htht(exp = expx, nomfich = nfic , nomsheet = "sat732")
 
 ```
 
@@ -733,18 +735,18 @@ L'étude porte sur `r ncas` cas. En raison du faible nombre de réponse aucun gr
   dplyr::select(50:62) |>
   tbl_likert() |> 
   modify_header(label ~ "Cadrage de l’activité") |> 
-  htht()
+  htht(exp = expx, nomfich = nfic , nomsheet = "sat733")
 ```
 
 ```{r}
-#| label: tbl-sat7347
+#| label: tbl-sat734
 #| tbl-cap: Contexte organisationnel
 
  sat7 |> 
   dplyr::select(63:75) |>
   tbl_likert() |> 
   modify_header(label ~ "Contexte organisationnel") |> 
-  htht()
+  htht(exp = expx, nomfich = nfic , nomsheet = "sat734")
 ```
 
 
@@ -759,7 +761,7 @@ sat7 |>
   dplyr::select(76:77) |>
   tbl_likert() |> 
   modify_header(label ~ " ") |> 
-  htht()
+  htht(exp = expx, nomfich = nfic , nomsheet = "sat741")
 ```
 
 
@@ -776,7 +778,7 @@ final |>
   dplyr::select(3:14) |>
   tbl_likert() |> 
   modify_header(label ~ " ") |> 
-  htht() |> 
+  htht(exp = expx, nomfich = nfic , nomsheet = "final1") |> 
    scroll_box(width = "150%", height = "900px")
 ```
 é
@@ -808,7 +810,7 @@ var_label(zz) <- "Objectifs atteints"
 zz |>
   tbl_summary() |>
   modify_header(label ~ "") |>
-  htht() 
+  htht(exp = expx, nomfich = nfic , nomsheet = "final2") 
 ```
 
 ```{r}
