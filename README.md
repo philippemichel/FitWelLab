@@ -1,4 +1,4 @@
-
+//
 ![USRC](novo_usrc.png)
 
 <!-- badges: start -->
@@ -17,6 +17,8 @@ Enquête de satisfaction
 
 **26/12/2024** Graphiques interactifs
                Exports en .ods des tableaux
+               
+**09/01/2025** Export en pdf sans graphiques interactifs. 
                
 # Résultats
 

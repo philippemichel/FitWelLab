@@ -200,7 +200,7 @@ theme_gtsummary_language(language = "fr", decimal.mark = ",")
 options(OutDec = ",")
 #
 load("datas/fitw.RData")
-expx <- TRUE
+expx <- FALSE
 nfic <- "fitw2.ods"
 #
 cat <- list(all_continuous() ~ "wilcox.test",
